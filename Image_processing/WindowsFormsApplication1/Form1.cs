@@ -217,25 +217,31 @@ namespace WindowsApplication1
                         for(int i=0; i< rgbData.GetLength(0); i++)
                         {
                             int total = 0;
+                            int count = 0;
                             for (int ii = 0; ii < 3; ii++)
                             {
-                                for(int jj = 0; jj < 3; jj++)
+                                if ((y + ii) >= rgbData.GetLength(1))
+                                    continue;
+                                for (int jj = 0; jj < 3; jj++)
                                 {
+                                    if ((x + jj) >= rgbData.GetLength(2))
+                                        continue;
                                     total += rgbData[i, y + ii, x + jj];
+                                    count++;
                                 }
                             }
 
-                            result[i, y - 1, x - 1] = total/9;
-                            result[i, y , x - 1] = total / 9;
-                            result[i, y + 1, x - 1] = total / 9;
-
-                            result[i, y - 1, x] = total / 9;
-                            result[i, y, x] = total / 9;
-                            result[i, y + 1, x] = total / 9;
-
-                            result[i, y - 1, x + 1] = total / 9;
-                            result[i, y, x + 1] = total / 9;
-                            result[i, y + 1, x + 1] = total / 9;
+                            for (int ii = 0; ii < 3; ii++)
+                            {
+                                if ((y + ii) >= rgbData.GetLength(1))
+                                    continue;
+                                for (int jj = 0; jj < 3; jj++)
+                                {
+                                    if ((x + jj) >= rgbData.GetLength(2))
+                                        continue;
+                                    result[i, y + ii, x + jj] = total / count;
+                                }
+                            }
                         }
                     }
                 }
@@ -254,15 +260,21 @@ namespace WindowsApplication1
                     {
                         for (int i = 0; i < rgbData.GetLength(0); i++)
                         {
-                            int[] total = new int[9];
+                            List<int> tmpLi = new List<int>();
                             int media = 0;
                             for (int ii = 0; ii < 3; ii++)
                             {
+                                if ((y + ii) >= rgbData.GetLength(1))
+                                    continue;
                                 for (int jj = 0; jj < 3; jj++)
                                 {
-                                    total[ii + jj] = rgbData[i, y + ii, x + jj];
+                                    if ((x + jj) >= rgbData.GetLength(2))
+                                        continue;
+                                    tmpLi.Add(rgbData[i, y + ii, x + jj]);
                                 }
                             }
+
+                            int[] total = tmpLi.ToArray();
 
                             //为了不修改arr值，对数组的计算和修改在tempArr数组中进行
                             int [] tempArr = new int[total.Length];
@@ -284,7 +296,11 @@ namespace WindowsApplication1
                             }
 
                             //针对数组元素的奇偶分类讨论
-                            if (tempArr.Length % 2 != 0)
+                            if(tempArr.Length == 1)
+                            {
+                                media = tempArr[0];
+                            }
+                            else if (tempArr.Length % 2 != 0)
                             {
                                 media = tempArr[total.Length / 2 + 1];
                             }
@@ -293,23 +309,49 @@ namespace WindowsApplication1
                                 media = (tempArr[tempArr.Length / 2] + tempArr[(tempArr.Length / 2) + 1]) / 2;
                             }
 
-                            result[i, y - 1, x - 1] = media;
-                            result[i, y, x - 1] = media;
-                            result[i, y + 1, x - 1] = media;
-
-                            result[i, y - 1, x] = media;
-                            result[i, y, x] = media;
-                            result[i, y + 1, x] = media;
-
-                            result[i, y - 1, x + 1] = media;
-                            result[i, y, x + 1] = media;
-                            result[i, y + 1, x + 1] = media;
+                            for (int ii = 0; ii < 3; ii++)
+                            {
+                                if ((y + ii) >= rgbData.GetLength(1))
+                                    continue;
+                                for (int jj = 0; jj < 3; jj++)
+                                {
+                                    if ((x + jj) >= rgbData.GetLength(2))
+                                        continue;
+                                    result[i, y + ii, x + jj] = media;
+                                }
+                            }
                         }
                     }
                 }
                 // Step 3: 更新顯示影像 
                 return result;
             }
+        }
+
+        class histogramEqualization
+        {
+            public histogramEqualization() { }
+
+           
+
+        }
+
+        class Thresholding:Form
+        {
+            public Thresholding()
+            {
+
+            }
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
