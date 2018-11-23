@@ -25,6 +25,7 @@ namespace WindowsApplication1
         {
             InitializeComponent();
         }
+        
         // Load 按鈕事件處理函式 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -63,10 +64,13 @@ namespace WindowsApplication1
             newImage = RGB2Image(newRGB);
             ImageForm MyImageB = new ImageForm(newImage, "B picture (RGB Extraction & transformation)"); // 建立秀圖物件
             MyImageB.Show();// 顯示秀圖照片
+
+            //mean
+            newRGB = RGBExtraction.meanRGB(RGBdata);
         }
 
         //Smooth filter
-        private void button4_Click(object sender, EventArgs e)
+        private void button3_Click(object sender, EventArgs e)
         {
             lastRGB = newRGB;
 
@@ -81,11 +85,33 @@ namespace WindowsApplication1
             ImageForm MyImageB = new ImageForm(newImage, "Median (Smooth filter)"); // 建立秀圖物件
             MyImageB.Show();// 顯示秀圖照片
         }
-        
-        //show 壓縮率&失真率
-        private void button3_Click(object sender, EventArgs e)
+
+        //累積機率函數那個
+        private void button4_Click(object sender, EventArgs e)
         {
-            
+            lastRGB = newRGB;
+
+            histogramEqualization histogramEqualization = new histogramEqualization();
+            newRGB = histogramEqualization.Convert2Histogram(lastRGB);
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageA = new ImageForm(newImage, "Histogram Equalization"); // 建立秀圖物件
+            MyImageA.Show();// 顯示秀圖照片
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+
+        }
+        
+        //A user-definedthresholding
+        private void button6_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
         }
 
         static public void LoadImage(String Filename)
@@ -196,7 +222,25 @@ namespace WindowsApplication1
                 // Step 3: 更新顯示影像 
                 return result;
             }
-           
+            
+            public int[,,] meanRGB(int[,,] data)
+            {
+                int[,,] result = (int[,,])data.Clone();
+
+                // Step 2: 設定像點資料
+                for (int y = 0; y < data.GetLength(1); y++)
+                {
+                    for (int x = 0; x < data.GetLength(2); x++)
+                    {
+                        int gray = (data[0, y, x] + data[1, y, x] + data[2, y, x])/3;
+                        result[0, y, x] = gray;
+                        result[1, y, x] = gray;
+                        result[2, y, x] = gray;
+                    }
+                }
+                // Step 3: 更新顯示影像 
+                return result;
+            }
         }
 
         class SmoothFilter:Form
@@ -353,7 +397,7 @@ namespace WindowsApplication1
 
             private int[] staticCrf(int[,,] data){
                 
-                int[] tmpArr = new int[255];
+                int[] tmpArr = new int[256];
 
                 //重置為0
                 for (int i=0; i < tmpArr.Length;i++){
@@ -367,6 +411,14 @@ namespace WindowsApplication1
                         tmpArr[data[0, i, j]] += 1;
                     }
                 }
+                int max = 0;
+                int min = int.MaxValue;
+                //找最大最小
+                for(int i = 0; i < tmpArr.Length; i++)
+                {
+                    if (tmpArr[i] < min & tmpArr[i] != 0)
+                        min = tmpArr[i];
+                }
 
                 //計算累積分佈函數
                 int total = 0;
@@ -374,9 +426,13 @@ namespace WindowsApplication1
                     total += tmpArr[i];
                     tmpArr[i] = total;
                 }
+
                 for (int i = 0; i < tmpArr.Length; i++)
                 {
-                    tmpArr[i] = tmpArr[i] / total * i;
+                    if (tmpArr[i] == 0)
+                        continue;
+                    float tmp = (tmpArr[i] - min) / (float)(tmpArr[255] - min);
+                    tmpArr[i] = (int)(tmp * 255);
                 }
 
                 return tmpArr;
@@ -537,6 +593,7 @@ namespace WindowsApplication1
             }
         }
 
+        /*
         class ConnectedComponent:Form{
             public ConnectedComponent(){}
 
@@ -595,15 +652,7 @@ namespace WindowsApplication1
                 for (int i = 0;i<)
             }
         }
-
-        private void button6_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
+        */
+        
     }
 }
