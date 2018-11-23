@@ -333,14 +333,266 @@ namespace WindowsApplication1
             public histogramEqualization() { }
 
            
+            public int[,,] Convert2Histogram(int[,,] data){
 
+                int[,,] result = new int[data.GetLength(0), data.GetLength(1), data.GetLength(2)];
+
+                int[] crf = staticCrf(data);
+
+                for (int i = 0; i < data.GetLength(1);i++){
+                    for (int j = 0; j < data.GetLength(2);j++){
+                        result[0, i, j] = crf[data[0, i, j]];
+                        result[1, i, j] = crf[data[1, i, j]];
+                        result[2, i, j] = crf[data[2, i, j]];
+                    }
+                }
+                    
+
+                return result;
+            }
+
+            private int[] staticCrf(int[,,] data){
+                
+                int[] tmpArr = new int[255];
+
+                //重置為0
+                for (int i=0; i < tmpArr.Length;i++){
+                    tmpArr[i] = 0;
+                }
+
+                //計算每個色階出現的次數
+                for (int i = 0; i < data.GetLength(1); i++)
+                {
+                    for (int j = 0; j < data.GetLength(2); j++){
+                        tmpArr[data[0, i, j]] += 1;
+                    }
+                }
+
+                //計算累積分佈函數
+                int total = 0;
+                for (int i = 0; i < tmpArr.Length;i++){
+                    total += tmpArr[i];
+                    tmpArr[i] = total;
+                }
+                for (int i = 0; i < tmpArr.Length; i++)
+                {
+                    tmpArr[i] = tmpArr[i] / total * i;
+                }
+
+                return tmpArr;
+            }
         }
 
         class Thresholding:Form
         {
             public Thresholding()
             {
+            }
 
+            public int[,,] OutputThresholding(int[,,] data, int door){
+
+                int[,,] result = new int[data.GetLength(0), data.GetLength(1), data.GetLength(2)];
+
+                for (int i = 0; i < data.GetLength(1); i++)
+                {
+                    for (int j = 0; j < data.GetLength(2); j++)
+                    {
+                        for (int ch = 0; ch < data.GetLength(0); ch++)
+                        {
+                            if (result[ch, i, j] >= door)
+                                result[ch, i, j] = 0;
+                            else
+                                result[ch, i, j] = 255;
+                        }
+                    }
+                }
+
+                return result;
+            }
+        }
+
+        class SobelEdgeDetection{
+            public SobelEdgeDetection(){}
+
+            /// <summary>
+            /// 最終決定要保留原色還是變成白色
+            /// </summary>
+            /// <returns>The sobel.</returns>
+            /// <param name="data">Data.</param>
+            /// <param name="door">Door.</param>
+            /// <param name="G">G.</param>
+            public int[,,] Sobel(int[,,] data, int door, int[,,] G){
+                int[,,] result = (int[,,])data.Clone();
+
+                for (int ch = 0; ch < data.GetLength(0); ch++)
+                {
+                    for (int i = 1; i < data.GetLength(1)-1; i++)
+                    {
+                        for (int j = 1; j < data.GetLength(2)-1; j++)
+                        {
+                            if (G[ch, i - 1, j - 1] >= door)
+                                result[ch, i, j] = 255;
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            /// <summary>
+            /// Combine GX和GY
+            /// </summary>
+            /// <returns>The sobel.</returns>
+            /// <param name="data">Data.</param>
+            /// <param name="door">Door.</param>
+            /// <param name="GX">Gx.</param>
+            /// <param name="GY">Gy.</param>
+            public int[,,] Sobel(int[,,] data, int door, int[,,] GX, int[,,] GY)
+            {
+                int[,,] result = (int[,,])data.Clone();
+
+                for (int ch = 0; ch < data.GetLength(0); ch++)
+                {
+                    for (int i = 1; i < data.GetLength(1) - 1; i++)
+                    {
+                        for (int j = 1; j < data.GetLength(2) - 1; j++)
+                        {
+                            double G = Math.Pow(Math.Pow(GX[ch, i - 1, j - 1], 2) + Math.Pow(GY[ch, i - 1, j - 1], 2), 0.5);
+
+                            if (G >= door)
+                                result[ch, i, j] = 255;
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            /// <summary>
+            /// 計算GX矩陣
+            /// </summary>
+            /// <returns>The gx.</returns>
+            /// <param name="data">Data.</param>
+            private int[,,] CalGX(int[,,] data){
+
+                int[,,] result = new int[data.GetLength(0), data.GetLength(1)-2, data.GetLength(2)-2];
+
+                for (int i = 1; i < data.GetLength(1)-1;i++){
+                    for (int j = 1; j < data.GetLength(2)-1;j++){
+                        for (int ch = 0; ch < data.GetLength(0);ch++){
+
+                            result[ch, i - 1, j - 1] = data[ch, i - 1, j - 1] - data[ch, i - 1, j + 1] + 2 * data[ch, i, j - 1] - 2 * data[ch, i, j + 1] + data[ch, i + 1, j - 1] - data[ch, i + 1, j + 1];
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            /// <summary>
+            /// 計算GY的矩陣
+            /// </summary>
+            /// <returns>The gy.</returns>
+            /// <param name="data">Data.</param>
+            private int[,,] CalGY(int[,,] data){
+                int[,,] result = new int[data.GetLength(0), data.GetLength(1) - 2, data.GetLength(2) - 2];
+
+                for (int i = 1; i < data.GetLength(1) - 1; i++)
+                {
+                    for (int j = 1; j < data.GetLength(2) - 1; j++)
+                    {
+                        for (int ch = 0; ch < data.GetLength(0); ch++)
+                        {
+
+                            result[ch, i - 1, j - 1] = data[ch, i - 1, j - 1] + 2 * data[ch, i - 1, j] + data[ch, i - 1, j + 1] - data[ch, i + 1, j - 1] - 2 * data[ch, i + 1, j] - data[ch, i + 1, j + 1];
+                        }
+                    }
+                }
+
+                return result;
+            }
+        } 
+
+        class BinaryImageOverlap{
+            public BinaryImageOverlap(){}
+
+            public int[,,] CalOverlap(int[,,] data, int door){
+                Thresholding Thresholding = new Thresholding();
+
+                int[,,] result = (int[,,])data.Clone();
+                int[,,] threshold = Thresholding.OutputThresholding(data, door);
+
+                for (int i = 0;i < result.GetLength(1);i++){
+                    for (int j = 0; j < result.GetLength(2);j++){
+                        //是黑色
+                        if(threshold[0,i,j] == 0){
+                            result[0, i, j] = 0;
+                            result[1, i, j] = 255;
+                            result[2, i, j] = 0;
+                        }
+                    }
+                }
+
+                return result;
+            }
+        }
+
+        class ConnectedComponent:Form{
+            public ConnectedComponent(){}
+
+            //計算物件並計算數量
+            public int[,,] CountObject(int[,,] data){
+
+
+                int count = 0;
+                for (int i = 0; i < data.GetLength(1); i++)
+                {
+                    for (int j = 0; j < data.GetLength(2); j++)
+                    {
+                        //是白色的在判斷
+                        if (data[0, i, j] == 255)
+                            continue;
+                       
+                        bool mark = false;
+                        int[] color = {0,0,0};
+                        //List<int> tmpLi = new List<int>();
+                        //掃描左上 上 左是不是被另外標記了
+                        for (int si = -1; si < 1; si++)
+                        {
+                            if ((si + i) >= data.GetLength(1) || (si + i) < 0)
+                                continue;
+                            for (int sj = -1; sj < 1; sj++)
+                            {
+                                if ((sj + j) >= data.GetLength(2) || (sj + j) < 0)
+                                    continue;
+                                if (data[0, i, j] != 255 & data[0, i, j] != 0)
+                                {
+                                    mark = true;
+                                    color[0] = data[0, i + si, j + sj];
+                                    color[1] = data[1, i + si, j + sj];
+                                    color[2] = data[2, i + si, j + sj];
+                                }
+                            }
+                        }
+
+                        if (mark)
+                        {
+                            
+                            result[ch, i, j] = count;
+                        }else{
+                            count += 1;
+                            result[ch, i, j] = count;
+                        }
+                    }
+                }
+
+
+                return result;
+            }
+
+            //將計算結果轉成image
+            public int[,,] Convert2Image(int[,,] data){
+                for (int i = 0;i<)
             }
         }
 
