@@ -98,19 +98,55 @@ namespace WindowsApplication1
             MyImageA.Show();// 顯示秀圖照片
         }
 
+        //A user-definedthresholding
         private void button5_Click(object sender, EventArgs e)
         {
+            lastRGB = newRGB;
+            string strtxt = textBox1.Text;
+            int th = Int32.Parse(strtxt);
 
+            Thresholding Thresholding = new Thresholding();
+            newRGB = Thresholding.OutputThresholding(lastRGB, th);
+
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageA = new ImageForm(newImage, "User-Definedthresholding"); // 建立秀圖物件
+            MyImageA.Show();// 顯示秀圖照片
         }
         
-        //A user-definedthresholding
+        //Sobel edge detection 
         private void button6_Click(object sender, EventArgs e)
         {
+            lastRGB = newRGB;
+            string strtxt = textBox1.Text;
+            int th = Int32.Parse(strtxt);
 
+            SobelEdgeDetection SobelEdgeDetection = new SobelEdgeDetection();
+            int[,,]GX = SobelEdgeDetection.CalGX(lastRGB);
+            int[,,]GY = SobelEdgeDetection.CalGY(lastRGB);
+
+            newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GX);
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageA = new ImageForm(newImage, "Vertical (Sobel edge detection)"); // 建立秀圖物件
+            MyImageA.Show();// 顯示秀圖照片
+
+            newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GY);
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageB = new ImageForm(newImage, "Horizontal (Sobel edge detection)"); // 建立秀圖物件
+            MyImageB.Show();// 顯示秀圖照片
+
+            newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GX, GY);
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageC = new ImageForm(newImage, "Combine (Sobel edge detection)"); // 建立秀圖物件
+            MyImageB.Show();// 顯示秀圖照片
         }
 
+
+
+        //Threshold the result of (5) to binary image and overlap on the original image
         private void Form1_Load(object sender, EventArgs e)
         {
+            lastRGB = newRGB;
+
 
         }
 
@@ -529,7 +565,7 @@ namespace WindowsApplication1
             /// </summary>
             /// <returns>The gx.</returns>
             /// <param name="data">Data.</param>
-            private int[,,] CalGX(int[,,] data){
+            public int[,,] CalGX(int[,,] data){
 
                 int[,,] result = new int[data.GetLength(0), data.GetLength(1)-2, data.GetLength(2)-2];
 
@@ -550,7 +586,7 @@ namespace WindowsApplication1
             /// </summary>
             /// <returns>The gy.</returns>
             /// <param name="data">Data.</param>
-            private int[,,] CalGY(int[,,] data){
+            public int[,,] CalGY(int[,,] data){
                 int[,,] result = new int[data.GetLength(0), data.GetLength(1) - 2, data.GetLength(2) - 2];
 
                 for (int i = 1; i < data.GetLength(1) - 1; i++)
