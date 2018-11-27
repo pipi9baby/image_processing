@@ -33,10 +33,14 @@
             this.button2 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.button4 = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
             this.button6 = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.button5 = new System.Windows.Forms.Button();
+            this.button7 = new System.Windows.Forms.Button();
+            this.button8 = new System.Windows.Forms.Button();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // button1
@@ -83,22 +87,13 @@
             this.button4.UseVisualStyleBackColor = true;
             this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
-            // button5
-            // 
-            this.button5.Location = new System.Drawing.Point(36, 156);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(221, 23);
-            this.button5.TabIndex = 4;
-            this.button5.Text = "Thresholding";
-            this.button5.UseVisualStyleBackColor = true;
-            // 
             // button6
             // 
             this.button6.Location = new System.Drawing.Point(36, 185);
             this.button6.Name = "button6";
             this.button6.Size = new System.Drawing.Size(221, 23);
             this.button6.TabIndex = 5;
-            this.button6.Text = "A user-definedthresholding";
+            this.button6.Text = "Sobel edge detection";
             this.button6.UseVisualStyleBackColor = true;
             this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
@@ -119,15 +114,69 @@
             this.label1.TabIndex = 7;
             this.label1.Text = "Threshold:";
             // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(36, 156);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(221, 23);
+            this.button5.TabIndex = 8;
+            this.button5.Text = "Thresholding";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click_1);
+            // 
+            // button7
+            // 
+            this.button7.Location = new System.Drawing.Point(36, 214);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(221, 23);
+            this.button7.TabIndex = 9;
+            this.button7.Text = "Binary image overlap";
+            this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
+            // 
+            // button8
+            // 
+            this.button8.Location = new System.Drawing.Point(36, 243);
+            this.button8.Name = "button8";
+            this.button8.Size = new System.Drawing.Size(221, 23);
+            this.button8.TabIndex = 10;
+            this.button8.Text = "Connected Component ";
+            this.button8.UseVisualStyleBackColor = true;
+            this.button8.Click += new System.EventHandler(this.button8_Click);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("新細明體", 12F);
+            this.label2.Location = new System.Drawing.Point(33, 269);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(137, 16);
+            this.label2.TabIndex = 11;
+            this.label2.Text = "Num of Component:";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("新細明體", 12F);
+            this.label3.Location = new System.Drawing.Point(176, 269);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(48, 16);
+            this.label3.TabIndex = 12;
+            this.label3.Text = "NULL";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(286, 318);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.button8);
+            this.Controls.Add(this.button7);
+            this.Controls.Add(this.button5);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.button6);
-            this.Controls.Add(this.button5);
             this.Controls.Add(this.button4);
             this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
@@ -147,10 +196,14 @@
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.Button button4;
-        private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button button7;
+        private System.Windows.Forms.Button button8;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
     }
 }
 

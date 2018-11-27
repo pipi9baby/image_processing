@@ -67,6 +67,9 @@ namespace WindowsApplication1
 
             //mean
             newRGB = RGBExtraction.meanRGB(RGBdata);
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageD = new ImageForm(newImage, "mean picture (RGB Extraction & transformation)"); // 建立秀圖物件
+            MyImageD.Show();// 顯示秀圖照片
         }
 
         //Smooth filter
@@ -99,7 +102,7 @@ namespace WindowsApplication1
         }
 
         //A user-definedthresholding
-        private void button5_Click(object sender, EventArgs e)
+        private void button5_Click_1(object sender, EventArgs e)
         {
             lastRGB = newRGB;
             string strtxt = textBox1.Text;
@@ -137,12 +140,34 @@ namespace WindowsApplication1
             newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GX, GY);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageC = new ImageForm(newImage, "Combine (Sobel edge detection)"); // 建立秀圖物件
-            MyImageB.Show();// 顯示秀圖照片
+            MyImageC.Show();// 顯示秀圖照片
         }
 
+        //Binary image overlap
+        private void button7_Click(object sender, EventArgs e)
+        {
+            lastRGB = newRGB;
+            string strtxt = textBox1.Text;
+            int th = Int32.Parse(strtxt);
 
+            BinaryImageOverlap BinaryImageOverlap = new BinaryImageOverlap();
+            newRGB = BinaryImageOverlap.CalOverlap(lastRGB, th);
+            newImage = RGB2Image(newRGB);
+            ImageForm MyImageA = new ImageForm(newImage, "Binary image overlap"); // 建立秀圖物件
+            MyImageA.Show();// 顯示秀圖照片
+        }
 
-        //Threshold the result of (5) to binary image and overlap on the original image
+        //Connect Componet
+        private void button8_Click(object sender, EventArgs e)
+        {
+            ConnectedComponent ConnectedComponent = new ConnectedComponent();
+            int componetNum = ConnectedComponent.CountObject(RGBdata);
+            label3.Text = componetNum.ToString();
+            newImage = RGB2Image(RGBdata);
+            ImageForm MyImageA = new ImageForm(newImage, "Connect Componet"); // 建立秀圖物件
+            MyImageA.Show();// 顯示秀圖照片
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             lastRGB = newRGB;
@@ -491,10 +516,10 @@ namespace WindowsApplication1
                     {
                         for (int ch = 0; ch < data.GetLength(0); ch++)
                         {
-                            if (result[ch, i, j] >= door)
-                                result[ch, i, j] = 0;
-                            else
+                            if (data[ch, i, j] >= door)
                                 result[ch, i, j] = 255;
+                            else
+                                result[ch, i, j] = 0;
                         }
                     }
                 }
@@ -609,15 +634,17 @@ namespace WindowsApplication1
             public BinaryImageOverlap(){}
 
             public int[,,] CalOverlap(int[,,] data, int door){
-                Thresholding Thresholding = new Thresholding();
+                
+                SobelEdgeDetection SobelEdgeDetection = new SobelEdgeDetection();
 
-                int[,,] result = (int[,,])data.Clone();
-                int[,,] threshold = Thresholding.OutputThresholding(data, door);
+                int[,,] GX = SobelEdgeDetection.CalGX(data);
+                int[,,] GY = SobelEdgeDetection.CalGY(data);
+                int[,,] result = SobelEdgeDetection.Sobel(data, door, GX, GY);
 
                 for (int i = 0;i < result.GetLength(1);i++){
                     for (int j = 0; j < result.GetLength(2);j++){
-                        //是黑色
-                        if(threshold[0,i,j] == 0){
+                        //是白色
+                        if(result[0,i,j] == 255){
                             result[0, i, j] = 0;
                             result[1, i, j] = 255;
                             result[2, i, j] = 0;
@@ -628,16 +655,16 @@ namespace WindowsApplication1
                 return result;
             }
         }
-
-        /*
+        
         class ConnectedComponent:Form{
             public ConnectedComponent(){}
 
             //計算物件並計算數量
-            public int[,,] CountObject(int[,,] data){
+            public int CountObject(int[,,] data){
 
-
+                ParseToZero(data);
                 int count = 0;
+                List<int> tmpLi = new List<int>();
                 for (int i = 0; i < data.GetLength(1); i++)
                 {
                     for (int j = 0; j < data.GetLength(2); j++)
@@ -645,50 +672,99 @@ namespace WindowsApplication1
                         //是白色的在判斷
                         if (data[0, i, j] == 255)
                             continue;
-                       
-                        bool mark = false;
-                        int[] color = {0,0,0};
-                        //List<int> tmpLi = new List<int>();
-                        //掃描左上 上 左是不是被另外標記了
-                        for (int si = -1; si < 1; si++)
+                        else
                         {
-                            if ((si + i) >= data.GetLength(1) || (si + i) < 0)
-                                continue;
-                            for (int sj = -1; sj < 1; sj++)
+                            bool mark = false;
+                            int[] color = { 0, 0, 0 };
+                            //List<int> tmpLi = new List<int>();
+                            //掃描左上 上 左 左下是不是被另外標記了
+                            for (int si = -1; si < 2; si++)
                             {
-                                if ((sj + j) >= data.GetLength(2) || (sj + j) < 0)
+                                if ((si + i) < 0 || (si+i) >= data.GetLength(1))
                                     continue;
-                                if (data[0, i, j] != 255 & data[0, i, j] != 0)
+                                for (int sj = -1; sj < 2; sj++)
                                 {
-                                    mark = true;
-                                    color[0] = data[0, i + si, j + sj];
-                                    color[1] = data[1, i + si, j + sj];
-                                    color[2] = data[2, i + si, j + sj];
+                                    if ((sj + j) < 0 || (sj + j) >= data.GetLength(2))
+                                        continue;
+                                    if (data[0, i + si, j + sj] != 255 & data[0, i + si, j + sj] != 0)
+                                    {
+                                        mark = true;
+                                        color[0] = data[0, i + si, j + sj];
+                                        color[1] = data[1, i + si, j + sj];
+                                        color[2] = data[2, i +  si, j + sj];
+                                    }
                                 }
                             }
-                        }
 
-                        if (mark)
-                        {
-                            
-                            result[ch, i, j] = count;
-                        }else{
-                            count += 1;
-                            result[ch, i, j] = count;
+                            if (mark)
+                            {
+                                for (int si = -1; si < 2; si++)
+                                {
+                                    if ((si + i) < 0 || (si + i) >= data.GetLength(1))
+                                        continue;
+                                    for (int sj = -1; sj < 2; sj++)
+                                    {
+                                        if ((sj + j) < 0 || (sj + j) >= data.GetLength(2))
+                                            continue;
+                                        if (data[0, i + si, j + sj] != 255)
+                                        {
+                                            data[0, i + si, j + sj] = color[0];
+                                            data[1, i + si, j + sj] = color[1];
+                                            data[2, i + si, j + sj] = color[2];
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Random ran = new Random();//亂數種子
+
+                                for (int k = 0; k < 3; k++)
+                                {
+                                    int ranNum = ran.Next(0, 255);
+                                    while (tmpLi.Contains(ranNum))
+                                    {
+                                        ranNum = ran.Next(0, 255);
+                                    }
+                                    tmpLi.Add(ranNum);
+
+                                    data[k, i, j] = ran.Next(0, 255);
+                                }
+
+                                count += 1;
+                            }
                         }
                     }
                 }
-
-
-                return result;
+                return count;
             }
 
-            //將計算結果轉成image
-            public int[,,] Convert2Image(int[,,] data){
-                for (int i = 0;i<)
+            //parse to 255 & 0
+            private void ParseToZero(int[,,] data)
+            {
+                
+                for(int j = 0; j < data.GetLength(1); j++)
+                {
+                    for(int k = 0; k < data.GetLength(2); k++)
+                    {
+                        if (data[0, j, k] < 128)
+                        {
+                            data[0, j, k] = 0;
+                            data[1, j, k] = 0;
+                            data[2, j, k] = 0;
+                        }
+                        else
+                        {
+                            data[0, j, k] = 255;
+                            data[1, j, k] = 255;
+                            data[2, j, k] = 255;
+                        }
+                    }
+                 }
+                
+
             }
         }
-        */
-        
+
     }
 }
