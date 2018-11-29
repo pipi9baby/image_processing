@@ -159,9 +159,10 @@ namespace WindowsApplication1
         private void button8_Click(object sender, EventArgs e)
         {
             ConnectedComponent ConnectedComponent = new ConnectedComponent();
-            int componetNum = ConnectedComponent.CountObject(RGBData[0]);
+            RGBData.Add((int[,,])RGBData[0].Clone());
+            int componetNum = ConnectedComponent.CountObject(RGBData[RGBData.Count - 1]);
             label3.Text = componetNum.ToString();
-            newImage = RGB2Image(RGBData[0]);
+            newImage = RGB2Image(RGBData[RGBData.Count - 1]);
             ImageForm MyImageA = new ImageForm(newImage, "Connect Componet"); // 建立秀圖物件
             MyImageA.Show();// 顯示秀圖照片
         }
@@ -736,9 +737,7 @@ namespace WindowsApplication1
         //計算物件並計算數量
         public int CountObject(int[,,] data)
         {
-
             ParseToZero(data);
-            int count = 0;
             List<int> tmpLi = new List<int>();//亂數過的數字
             tmpLi.Add(255);
             tmpLi.Add(0);
@@ -761,7 +760,8 @@ namespace WindowsApplication1
                             {
                                 if ((sj + j) < 0 || (sj + j) >= data.GetLength(2))
                                     continue;
-                                if (data[0, i + si, j + sj] != 255 & data[0, i + si, j + sj] != 0)
+
+                                if (data[0, i + si, j + sj] < 255 && data[0, i + si, j + sj] > 0)
                                 {
                                     mark = true;
                                     color[0] = data[0, i + si, j + sj];
@@ -770,7 +770,7 @@ namespace WindowsApplication1
                                 }
                             }
                         }
-
+                       
                         if (mark)
                         {
                             //他的九宮格也要一起上色
@@ -793,19 +793,17 @@ namespace WindowsApplication1
                                         continue;
                                     }
                                     //是其他顏色的
-                                    else if (data[0, i + si, j + sj] != color[0] ||
-                                             data[1, i + si, j + sj] != color[1] ||
-                                             data[2, i + si, j + sj] != color[2])
+                                    else if (data[0, i + si, j + sj] != color[0] || data[1, i + si, j + sj] != color[1] || data[2, i + si, j + sj] != color[2])
                                     {
                                         String Key = data[0, i + si, j + sj] + "_" + data[1, i + si, j + sj] + "_" + data[2, i + si, j + sj];
-
+                                         
                                         if (MyDic.ContainsKey(Key))
                                             continue;
                                         List<int> value = new List<int>();
                                         value.Add(color[0]);
                                         value.Add(color[1]);
                                         value.Add(color[2]);
-                                        MyDic.Add(Key, value);
+                                        MyDic.Add(Key, value);                                        
                                     }
                                 }
                             }
@@ -825,30 +823,63 @@ namespace WindowsApplication1
 
                                 data[k, i, j] = ran.Next(0, 255);
                             }
-
-                            count += 1;
                         }
                     }
                 }
             }
             //重新改顏色
+            List<String> minCount = new List<String>();
             for (int i = 0; i < data.GetLength(1); i++)
             {
                 for (int j = 0; j < data.GetLength(2); j++)
                 {
+                    String sKey;
                     String Key = data[0, i, j] + "_" + data[1, i, j] + "_" + data[2, i, j];
-
-                    if (MyDic.ContainsKey(Key))
+                    if (!MyDic.ContainsKey(Key))
                     {
-                        for (int k = 0; k < 3; k++)
+                        continue;
+                    }
+                    while (true)
+                    {
+                        sKey = Key;
+                        Key = MyDic[Key][0] + "_" + MyDic[Key][1] + "_" + MyDic[Key][2];
+                        if (!MyDic.ContainsKey(Key))
                         {
-                            data[k, i, j] = MyDic[Key][k];
+                            Key = sKey;
+                            break;
                         }
-
+                        if(!minCount.Contains(Key))
+                            minCount.Add(Key);
+                    }
+                    for (int k = 0; k < 3; k++)
+                    {
+                        data[k, i, j] = MyDic[Key][k];
                     }
                 }
             }
-            return count - MyDic.Keys.Count;
+
+            List<String> colorLi = new List<string>();
+            //數顏色數量
+            for (int i = 0; i < data.GetLength(1); i++)
+            {
+                for (int j = 0; j < data.GetLength(2); j++)
+                {
+                    for(int k = 0; k < data.GetLength(0); k++)
+                    {
+                        if(data[k, i, j] < 255 && data[k, i, j] >0)
+                        {
+                            String Key = data[0, i, j] + "_" + data[1, i, j] + "_" + data[2, i, j];
+                            if (!colorLi.Contains(Key))
+                            {
+                                colorLi.Add(Key);
+                            }
+                        }
+                        
+                    }
+                }
+            }
+ 
+            return colorLi.Count;
         }
 
         //parse to 255 & 0
