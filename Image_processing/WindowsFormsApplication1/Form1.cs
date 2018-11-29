@@ -9,13 +9,13 @@ using System.Linq;
 using System.Drawing.Imaging; // for ImageFormat
 using System.IO;//輸入讀取
 using System.Globalization;
+using ZedGraph;
 
 namespace WindowsApplication1
 {
     public partial class Form1 : Form
     {
-        int[,,] RGBdata;//原始的陣列
-        int[,,] lastRGB;
+        List<int[,,]> RGBData = new List<int[,,]>();//undo用的
         int[,,] newRGB;//各種更新後的
         static Image image;
         Image newImage;
@@ -34,9 +34,7 @@ namespace WindowsApplication1
                 RGBExtraction RGBExtraction = new RGBExtraction();// 建立物件
                 Filename = openFileDialog1.FileName; //檔案名稱
                 LoadImage(Filename);
-                RGBdata = RGBExtraction.getRGBData(image);//取得RGB
-                newRGB = RGBExtraction.getRGBData(image);//取得RGB
-                lastRGB = RGBExtraction.getRGBData(image);//取得RGB
+                RGBData.Add(RGBExtraction.getRGBData(image));//取得RGB
                 ImageForm MyImage = new ImageForm(image, "Input File"); // 建立秀圖物件
                 MyImage.Show();// 顯示秀圖照片 
             }
@@ -48,25 +46,26 @@ namespace WindowsApplication1
         {
             RGBExtraction RGBExtraction = new RGBExtraction();// 建立物件
             //R
-            newRGB = RGBExtraction.doRGray(RGBdata, 0);
+            newRGB = RGBExtraction.doRGray(RGBData[RGBData.Count-1], 0);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageR = new ImageForm(newImage, "R picture (RGB Extraction & transformation)"); // 建立秀圖物件
             MyImageR.Show();// 顯示秀圖照片 
 
             //G
-            newRGB = RGBExtraction.doRGray(RGBdata, 1);
+            newRGB = RGBExtraction.doRGray(RGBData[RGBData.Count - 1], 1);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageG = new ImageForm(newImage, "G picture (RGB Extraction & transformation)"); // 建立秀圖物件
             MyImageG.Show();// 顯示秀圖照片
 
             //B
-            newRGB = RGBExtraction.doRGray(RGBdata, 2);
+            newRGB = RGBExtraction.doRGray(RGBData[RGBData.Count - 1], 2);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageB = new ImageForm(newImage, "B picture (RGB Extraction & transformation)"); // 建立秀圖物件
             MyImageB.Show();// 顯示秀圖照片
 
             //mean
-            newRGB = RGBExtraction.meanRGB(RGBdata);
+            newRGB = RGBExtraction.meanRGB(RGBData[RGBData.Count - 1]);
+            RGBData.Add(newRGB);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageD = new ImageForm(newImage, "mean picture (RGB Extraction & transformation)"); // 建立秀圖物件
             MyImageD.Show();// 顯示秀圖照片
@@ -75,16 +74,15 @@ namespace WindowsApplication1
         //Smooth filter
         private void button3_Click(object sender, EventArgs e)
         {
-            lastRGB = newRGB;
-
             SmoothFilter SmoothFilter = new SmoothFilter();
-            newRGB = SmoothFilter.MeanSmooth(lastRGB);
+            newRGB = SmoothFilter.MeanSmooth(RGBData[RGBData.Count - 1]);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageA = new ImageForm(newImage, "Mean (Smooth filter)"); // 建立秀圖物件
             MyImageA.Show();// 顯示秀圖照片
 
-            newRGB = SmoothFilter.MedianSmooth(lastRGB);
+            newRGB = SmoothFilter.MedianSmooth(RGBData[RGBData.Count - 1]);
             newImage = RGB2Image(newRGB);
+            RGBData.Add(newRGB);
             ImageForm MyImageB = new ImageForm(newImage, "Median (Smooth filter)"); // 建立秀圖物件
             MyImageB.Show();// 顯示秀圖照片
         }
@@ -92,25 +90,25 @@ namespace WindowsApplication1
         //累積機率函數那個
         private void button4_Click(object sender, EventArgs e)
         {
-            lastRGB = newRGB;
-
             histogramEqualization histogramEqualization = new histogramEqualization();
-            newRGB = histogramEqualization.Convert2Histogram(lastRGB);
+            histogramEqualization.PrintGraph(RGBData[RGBData.Count - 1], pictureBox1,"Before");
+            newRGB = histogramEqualization.Convert2Histogram(RGBData[RGBData.Count - 1]);
+            RGBData.Add(newRGB);
             newImage = RGB2Image(newRGB);
+            histogramEqualization.PrintGraph(newRGB, pictureBox2, "After");
             ImageForm MyImageA = new ImageForm(newImage, "Histogram Equalization"); // 建立秀圖物件
-            MyImageA.Show();// 顯示秀圖照片
+            MyImageA.Show();// 顯示秀圖照片          
         }
 
         //A user-definedthresholding
         private void button5_Click_1(object sender, EventArgs e)
         {
-            lastRGB = newRGB;
             string strtxt = textBox1.Text;
             int th = Int32.Parse(strtxt);
 
             Thresholding Thresholding = new Thresholding();
-            newRGB = Thresholding.OutputThresholding(lastRGB, th);
-
+            newRGB = Thresholding.OutputThresholding(RGBData[RGBData.Count - 1], th);
+            RGBData.Add(newRGB);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageA = new ImageForm(newImage, "User-Definedthresholding"); // 建立秀圖物件
             MyImageA.Show();// 顯示秀圖照片
@@ -119,26 +117,26 @@ namespace WindowsApplication1
         //Sobel edge detection 
         private void button6_Click(object sender, EventArgs e)
         {
-            lastRGB = newRGB;
             string strtxt = textBox1.Text;
             int th = Int32.Parse(strtxt);
 
             SobelEdgeDetection SobelEdgeDetection = new SobelEdgeDetection();
-            int[,,]GX = SobelEdgeDetection.CalGX(lastRGB);
-            int[,,]GY = SobelEdgeDetection.CalGY(lastRGB);
+            int[,,]GX = SobelEdgeDetection.CalGX(RGBData[RGBData.Count - 1]);
+            int[,,]GY = SobelEdgeDetection.CalGY(RGBData[RGBData.Count - 1]);
 
-            newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GX);
+            newRGB = SobelEdgeDetection.Sobel(RGBData[RGBData.Count - 1], th, GX);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageA = new ImageForm(newImage, "Vertical (Sobel edge detection)"); // 建立秀圖物件
             MyImageA.Show();// 顯示秀圖照片
 
-            newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GY);
+            newRGB = SobelEdgeDetection.Sobel(RGBData[RGBData.Count - 1], th, GY);
             newImage = RGB2Image(newRGB);
             ImageForm MyImageB = new ImageForm(newImage, "Horizontal (Sobel edge detection)"); // 建立秀圖物件
             MyImageB.Show();// 顯示秀圖照片
 
-            newRGB = SobelEdgeDetection.Sobel(lastRGB, th, GX, GY);
+            newRGB = SobelEdgeDetection.Sobel(RGBData[RGBData.Count - 1], th, GX, GY);
             newImage = RGB2Image(newRGB);
+            RGBData.Add(newRGB);
             ImageForm MyImageC = new ImageForm(newImage, "Combine (Sobel edge detection)"); // 建立秀圖物件
             MyImageC.Show();// 顯示秀圖照片
         }
@@ -146,13 +144,13 @@ namespace WindowsApplication1
         //Binary image overlap
         private void button7_Click(object sender, EventArgs e)
         {
-            lastRGB = newRGB;
             string strtxt = textBox1.Text;
             int th = Int32.Parse(strtxt);
 
             BinaryImageOverlap BinaryImageOverlap = new BinaryImageOverlap();
-            newRGB = BinaryImageOverlap.CalOverlap(lastRGB, th);
+            newRGB = BinaryImageOverlap.CalOverlap(RGBData[RGBData.Count - 1], th);
             newImage = RGB2Image(newRGB);
+            RGBData.Add(newRGB);
             ImageForm MyImageA = new ImageForm(newImage, "Binary image overlap"); // 建立秀圖物件
             MyImageA.Show();// 顯示秀圖照片
         }
@@ -161,20 +159,39 @@ namespace WindowsApplication1
         private void button8_Click(object sender, EventArgs e)
         {
             ConnectedComponent ConnectedComponent = new ConnectedComponent();
-            int componetNum = ConnectedComponent.CountObject(RGBdata);
+            int componetNum = ConnectedComponent.CountObject(RGBData[0]);
             label3.Text = componetNum.ToString();
-            newImage = RGB2Image(RGBdata);
+            newImage = RGB2Image(RGBData[0]);
             ImageForm MyImageA = new ImageForm(newImage, "Connect Componet"); // 建立秀圖物件
             MyImageA.Show();// 顯示秀圖照片
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        //Undo
+        private void button9_Click(object sender, EventArgs e)
         {
-            lastRGB = newRGB;
-
-
+            RGBData.RemoveAt(RGBData.Count - 1);
+            newImage = RGB2Image(RGBData[RGBData.Count-1]);
+            ImageForm MyImageA = new ImageForm(newImage, "Undo"); // 建立秀圖物件
+            MyImageA.Show();// 顯示秀圖照片
         }
 
+        //儲存圖片
+        private void button10_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "All Files|*.*|Bitmap Files (.bmp)|*.bmp|Jpeg File(.jpg)|*.jpg";
+
+            if (sfd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                newImage = RGB2Image(RGBData[RGBData.Count - 1]);
+                newImage.Save(sfd.FileName);
+            }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
         static public void LoadImage(String Filename)
         {   //載入檔案
             image = Image.FromFile(Filename);
@@ -199,572 +216,665 @@ namespace WindowsApplication1
             // Step 3: 更新顯示影像 
             return bimage;
         }
-
-        // 建立一個專門秀圖的 Form 類別
-        class ImageForm : Form
+    }
+    // 建立一個專門秀圖的 Form 類別
+    class ImageForm : Form
+    {
+        Image image; // 建構子 
+        public ImageForm(Image image, String text)
         {
-            Image image; // 建構子 
-            public ImageForm(Image image, String text)
-            {
-                this.image = image;
-                this.Text = text;
-                //調整視窗大小
-                this.Height = image.Height;
-                this.Width = image.Width;
+            this.image = image;
+            this.Text = text;
+            //調整視窗大小
+            this.Height = image.Height;
+            this.Width = image.Width;
 
-                InitializeMyScrollBar();
+            InitializeMyScrollBar();
 
-            }
-            //ScrollBar視窗滾動
-            private void InitializeMyScrollBar()
-            {
-                VScrollBar vScrollBar1 = new VScrollBar();
-                HScrollBar hScrollBar1 = new HScrollBar();
-                vScrollBar1.Dock = DockStyle.Right;
-                hScrollBar1.Dock = DockStyle.Bottom;
-                Controls.Add(vScrollBar1);
-                Controls.Add(hScrollBar1);
+        }
+        //ScrollBar視窗滾動
+        private void InitializeMyScrollBar()
+        {
+            VScrollBar vScrollBar1 = new VScrollBar();
+            HScrollBar hScrollBar1 = new HScrollBar();
+            vScrollBar1.Dock = DockStyle.Right;
+            hScrollBar1.Dock = DockStyle.Bottom;
+            Controls.Add(vScrollBar1);
+            Controls.Add(hScrollBar1);
 
-            }
-            //顯示圖片
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                e.Graphics.DrawImage(image, 0, 0, image.Width, image.Height);
-            }
+        }
+        //顯示圖片
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.DrawImage(image, 0, 0, image.Width, image.Height);
         }
 
-        class RGBExtraction : Form
+    }
+
+    class RGBExtraction : Form
+    {
+        public RGBExtraction()//
         {
-            public RGBExtraction()//
-            {
 
-            }
-
-            public int[,,] getRGBData(Image image)
-            {
-                Bitmap bimage;
-
-                // Step 1: 利用 Bitmap 將 image 包起來
-                bimage = new Bitmap(image);
-                Height = bimage.Height;
-                Width = bimage.Width;
-                //初始化陣列
-                int[,,] rgbData = new int[3, Height, Width];
-
-                // Step 2: 取得像點顏色資訊
-                for (int y = 0; y < Height; y++)
-                {
-                    for (int x = 0; x < Width; x++)
-                    {
-                        Color color = bimage.GetPixel(x, y);
-                        rgbData[0, y, x] = color.R;
-                        rgbData[1, y, x] = color.G;
-                        rgbData[2, y, x] = color.B;
-                    }
-                }
-                return rgbData;
-            }
-
-            public int[,,] doRGray(int[,,] rgbData, int RGB)
-            {
-                int[,,] result = new int[rgbData.GetLength(0), rgbData.GetLength(1), rgbData.GetLength(2)];
-
-                // Step 2: 設定像點資料
-                for (int y = 0; y < rgbData.GetLength(1); y++)
-                {
-                    for (int x = 0; x < rgbData.GetLength(2); x++)
-                    {
-                        int gray = rgbData[RGB, y, x];
-                        result[0, y, x] = gray;
-                        result[1, y, x] = gray;
-                        result[2, y, x] = gray;
-                    }
-                }
-                // Step 3: 更新顯示影像 
-                return result;
-            }
-            
-            public int[,,] meanRGB(int[,,] data)
-            {
-                int[,,] result = (int[,,])data.Clone();
-
-                // Step 2: 設定像點資料
-                for (int y = 0; y < data.GetLength(1); y++)
-                {
-                    for (int x = 0; x < data.GetLength(2); x++)
-                    {
-                        int gray = (data[0, y, x] + data[1, y, x] + data[2, y, x])/3;
-                        result[0, y, x] = gray;
-                        result[1, y, x] = gray;
-                        result[2, y, x] = gray;
-                    }
-                }
-                // Step 3: 更新顯示影像 
-                return result;
-            }
         }
 
-        class SmoothFilter:Form
+        public int[,,] getRGBData(Image image)
         {
-            public SmoothFilter()//
-            {
-            }
+            Bitmap bimage;
 
-            public int[,,] MeanSmooth(int[,,] rgbData)
-            {
-                int[,,] result = new int[rgbData.GetLength(0), rgbData.GetLength(1), rgbData.GetLength(2)];
+            // Step 1: 利用 Bitmap 將 image 包起來
+            bimage = new Bitmap(image);
+            Height = bimage.Height;
+            Width = bimage.Width;
+            //初始化陣列
+            int[,,] rgbData = new int[3, Height, Width];
 
-                // Step 2: 設定像點資料
-                for (int y = 0; y < rgbData.GetLength(1); y+=3)
+            // Step 2: 取得像點顏色資訊
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
                 {
-                    for (int x = 0; x < rgbData.GetLength(2); x+=3)
+                    Color color = bimage.GetPixel(x, y);
+                    rgbData[0, y, x] = color.R;
+                    rgbData[1, y, x] = color.G;
+                    rgbData[2, y, x] = color.B;
+                }
+            }
+            return rgbData;
+        }
+
+        public int[,,] doRGray(int[,,] rgbData, int RGB)
+        {
+            int[,,] result = new int[rgbData.GetLength(0), rgbData.GetLength(1), rgbData.GetLength(2)];
+
+            // Step 2: 設定像點資料
+            for (int y = 0; y < rgbData.GetLength(1); y++)
+            {
+                for (int x = 0; x < rgbData.GetLength(2); x++)
+                {
+                    int gray = rgbData[RGB, y, x];
+                    result[0, y, x] = gray;
+                    result[1, y, x] = gray;
+                    result[2, y, x] = gray;
+                }
+            }
+            // Step 3: 更新顯示影像 
+            return result;
+        }
+
+        public int[,,] meanRGB(int[,,] data)
+        {
+            int[,,] result = (int[,,])data.Clone();
+
+            // Step 2: 設定像點資料
+            for (int y = 0; y < data.GetLength(1); y++)
+            {
+                for (int x = 0; x < data.GetLength(2); x++)
+                {
+                    int gray = (data[0, y, x] + data[1, y, x] + data[2, y, x]) / 3;
+                    result[0, y, x] = gray;
+                    result[1, y, x] = gray;
+                    result[2, y, x] = gray;
+                }
+            }
+            // Step 3: 更新顯示影像 
+            return result;
+        }
+    }
+
+    class SmoothFilter : Form
+    {
+        public SmoothFilter()//
+        {
+        }
+
+        public int[,,] MeanSmooth(int[,,] rgbData)
+        {
+            int[,,] result = new int[rgbData.GetLength(0), rgbData.GetLength(1), rgbData.GetLength(2)];
+
+            // Step 2: 設定像點資料
+            for (int y = 0; y < rgbData.GetLength(1); y += 3)
+            {
+                for (int x = 0; x < rgbData.GetLength(2); x += 3)
+                {
+                    for (int i = 0; i < rgbData.GetLength(0); i++)
                     {
-                        for(int i=0; i< rgbData.GetLength(0); i++)
+                        int total = 0;
+                        int count = 0;
+                        for (int ii = 0; ii < 3; ii++)
                         {
-                            int total = 0;
-                            int count = 0;
-                            for (int ii = 0; ii < 3; ii++)
+                            if ((y + ii) >= rgbData.GetLength(1))
+                                continue;
+                            for (int jj = 0; jj < 3; jj++)
                             {
-                                if ((y + ii) >= rgbData.GetLength(1))
+                                if ((x + jj) >= rgbData.GetLength(2))
                                     continue;
-                                for (int jj = 0; jj < 3; jj++)
-                                {
-                                    if ((x + jj) >= rgbData.GetLength(2))
-                                        continue;
-                                    total += rgbData[i, y + ii, x + jj];
-                                    count++;
-                                }
-                            }
-
-                            for (int ii = 0; ii < 3; ii++)
-                            {
-                                if ((y + ii) >= rgbData.GetLength(1))
-                                    continue;
-                                for (int jj = 0; jj < 3; jj++)
-                                {
-                                    if ((x + jj) >= rgbData.GetLength(2))
-                                        continue;
-                                    result[i, y + ii, x + jj] = total / count;
-                                }
+                                total += rgbData[i, y + ii, x + jj];
+                                count++;
                             }
                         }
-                    }
-                }
-                // Step 3: 更新顯示影像 
-                return result;
-            }
 
-            public int[,,] MedianSmooth(int[,,] rgbData)
-            {
-                int[,,] result = new int[rgbData.GetLength(0), rgbData.GetLength(1), rgbData.GetLength(2)];
-
-                // Step 2: 設定像點資料
-                for (int y = 0; y < rgbData.GetLength(1); y += 3)
-                {
-                    for (int x = 0; x < rgbData.GetLength(2); x += 3)
-                    {
-                        for (int i = 0; i < rgbData.GetLength(0); i++)
+                        for (int ii = 0; ii < 3; ii++)
                         {
-                            List<int> tmpLi = new List<int>();
-                            int media = 0;
-                            for (int ii = 0; ii < 3; ii++)
+                            if ((y + ii) >= rgbData.GetLength(1))
+                                continue;
+                            for (int jj = 0; jj < 3; jj++)
                             {
-                                if ((y + ii) >= rgbData.GetLength(1))
+                                if ((x + jj) >= rgbData.GetLength(2))
                                     continue;
-                                for (int jj = 0; jj < 3; jj++)
-                                {
-                                    if ((x + jj) >= rgbData.GetLength(2))
-                                        continue;
-                                    tmpLi.Add(rgbData[i, y + ii, x + jj]);
-                                }
-                            }
-
-                            int[] total = tmpLi.ToArray();
-
-                            //为了不修改arr值，对数组的计算和修改在tempArr数组中进行
-                            int [] tempArr = new int[total.Length];
-                            total.CopyTo(tempArr, 0);
-
-                            //对数组进行排序
-                            int temp;
-                            for (int ii = 0; ii < tempArr.Length; ii++)
-                            {
-                                for (int j = ii; j < tempArr.Length; j++)
-                                {
-                                    if (tempArr[ii] > tempArr[j])
-                                    {
-                                        temp = tempArr[ii];
-                                        tempArr[ii] = tempArr[j];
-                                        tempArr[j] = temp;
-                                    }
-                                }
-                            }
-
-                            //针对数组元素的奇偶分类讨论
-                            if(tempArr.Length == 1)
-                            {
-                                media = tempArr[0];
-                            }
-                            else if (tempArr.Length % 2 != 0)
-                            {
-                                media = tempArr[total.Length / 2 + 1];
-                            }
-                            else
-                            {
-                                media = (tempArr[tempArr.Length / 2] + tempArr[(tempArr.Length / 2) + 1]) / 2;
-                            }
-
-                            for (int ii = 0; ii < 3; ii++)
-                            {
-                                if ((y + ii) >= rgbData.GetLength(1))
-                                    continue;
-                                for (int jj = 0; jj < 3; jj++)
-                                {
-                                    if ((x + jj) >= rgbData.GetLength(2))
-                                        continue;
-                                    result[i, y + ii, x + jj] = media;
-                                }
+                                result[i, y + ii, x + jj] = total / count;
                             }
                         }
                     }
                 }
-                // Step 3: 更新顯示影像 
-                return result;
             }
+            // Step 3: 更新顯示影像 
+            return result;
         }
 
-        class histogramEqualization
+        public int[,,] MedianSmooth(int[,,] rgbData)
         {
-            public histogramEqualization() { }
+            int[,,] result = new int[rgbData.GetLength(0), rgbData.GetLength(1), rgbData.GetLength(2)];
 
-           
-            public int[,,] Convert2Histogram(int[,,] data){
+            // Step 2: 設定像點資料
+            for (int y = 0; y < rgbData.GetLength(1); y += 3)
+            {
+                for (int x = 0; x < rgbData.GetLength(2); x += 3)
+                {
+                    for (int i = 0; i < rgbData.GetLength(0); i++)
+                    {
+                        List<int> tmpLi = new List<int>();
+                        int media = 0;
+                        for (int ii = 0; ii < 3; ii++)
+                        {
+                            if ((y + ii) >= rgbData.GetLength(1))
+                                continue;
+                            for (int jj = 0; jj < 3; jj++)
+                            {
+                                if ((x + jj) >= rgbData.GetLength(2))
+                                    continue;
+                                tmpLi.Add(rgbData[i, y + ii, x + jj]);
+                            }
+                        }
 
-                int[,,] result = new int[data.GetLength(0), data.GetLength(1), data.GetLength(2)];
+                        int[] total = tmpLi.ToArray();
 
-                int[] crf = staticCrf(data);
+                        //为了不修改arr值，对数组的计算和修改在tempArr数组中进行
+                        int[] tempArr = new int[total.Length];
+                        total.CopyTo(tempArr, 0);
 
-                for (int i = 0; i < data.GetLength(1);i++){
-                    for (int j = 0; j < data.GetLength(2);j++){
-                        result[0, i, j] = crf[data[0, i, j]];
-                        result[1, i, j] = crf[data[1, i, j]];
-                        result[2, i, j] = crf[data[2, i, j]];
+                        //对数组进行排序
+                        int temp;
+                        for (int ii = 0; ii < tempArr.Length; ii++)
+                        {
+                            for (int j = ii; j < tempArr.Length; j++)
+                            {
+                                if (tempArr[ii] > tempArr[j])
+                                {
+                                    temp = tempArr[ii];
+                                    tempArr[ii] = tempArr[j];
+                                    tempArr[j] = temp;
+                                }
+                            }
+                        }
+
+                        //针对数组元素的奇偶分类讨论
+                        if (tempArr.Length == 1)
+                        {
+                            media = tempArr[0];
+                        }
+                        else if (tempArr.Length % 2 != 0)
+                        {
+                            media = tempArr[total.Length / 2 + 1];
+                        }
+                        else
+                        {
+                            media = (tempArr[tempArr.Length / 2] + tempArr[(tempArr.Length / 2) + 1]) / 2;
+                        }
+
+                        for (int ii = 0; ii < 3; ii++)
+                        {
+                            if ((y + ii) >= rgbData.GetLength(1))
+                                continue;
+                            for (int jj = 0; jj < 3; jj++)
+                            {
+                                if ((x + jj) >= rgbData.GetLength(2))
+                                    continue;
+                                result[i, y + ii, x + jj] = media;
+                            }
+                        }
                     }
                 }
-                    
-
-                return result;
             }
-
-            private int[] staticCrf(int[,,] data){
-                
-                int[] tmpArr = new int[256];
-
-                //重置為0
-                for (int i=0; i < tmpArr.Length;i++){
-                    tmpArr[i] = 0;
-                }
-
-                //計算每個色階出現的次數
-                for (int i = 0; i < data.GetLength(1); i++)
-                {
-                    for (int j = 0; j < data.GetLength(2); j++){
-                        tmpArr[data[0, i, j]] += 1;
-                    }
-                }
-                int max = 0;
-                int min = int.MaxValue;
-                //找最大最小
-                for(int i = 0; i < tmpArr.Length; i++)
-                {
-                    if (tmpArr[i] < min & tmpArr[i] != 0)
-                        min = tmpArr[i];
-                }
-
-                //計算累積分佈函數
-                int total = 0;
-                for (int i = 0; i < tmpArr.Length;i++){
-                    total += tmpArr[i];
-                    tmpArr[i] = total;
-                }
-
-                for (int i = 0; i < tmpArr.Length; i++)
-                {
-                    if (tmpArr[i] == 0)
-                        continue;
-                    float tmp = (tmpArr[i] - min) / (float)(tmpArr[255] - min);
-                    tmpArr[i] = (int)(tmp * 255);
-                }
-
-                return tmpArr;
-            }
+            // Step 3: 更新顯示影像 
+            return result;
         }
+    }
 
-        class Thresholding:Form
+    class histogramEqualization
+    {
+        public histogramEqualization() { }
+
+        public int[,,] Convert2Histogram(int[,,] data)
         {
-            public Thresholding()
+
+            int[,,] result = new int[data.GetLength(0), data.GetLength(1), data.GetLength(2)];
+
+            int[] crf = staticCrf(data);
+
+            for (int i = 0; i < data.GetLength(1); i++)
             {
-            }
-
-            public int[,,] OutputThresholding(int[,,] data, int door){
-
-                int[,,] result = new int[data.GetLength(0), data.GetLength(1), data.GetLength(2)];
-
-                for (int i = 0; i < data.GetLength(1); i++)
+                for (int j = 0; j < data.GetLength(2); j++)
                 {
-                    for (int j = 0; j < data.GetLength(2); j++)
-                    {
-                        for (int ch = 0; ch < data.GetLength(0); ch++)
-                        {
-                            if (data[ch, i, j] >= door)
-                                result[ch, i, j] = 255;
-                            else
-                                result[ch, i, j] = 0;
-                        }
-                    }
+                    result[0, i, j] = crf[data[0, i, j]];
+                    result[1, i, j] = crf[data[1, i, j]];
+                    result[2, i, j] = crf[data[2, i, j]];
                 }
-
-                return result;
             }
+
+
+            return result;
         }
 
-        class SobelEdgeDetection{
-            public SobelEdgeDetection(){}
+        private int[] CalPixelNum(int[,,] data)
+        {
+            int[] tmpArr = new int[256];
 
-            /// <summary>
-            /// 最終決定要保留原色還是變成白色
-            /// </summary>
-            /// <returns>The sobel.</returns>
-            /// <param name="data">Data.</param>
-            /// <param name="door">Door.</param>
-            /// <param name="G">G.</param>
-            public int[,,] Sobel(int[,,] data, int door, int[,,] G){
-                int[,,] result = (int[,,])data.Clone();
-
-                for (int ch = 0; ch < data.GetLength(0); ch++)
-                {
-                    for (int i = 1; i < data.GetLength(1)-1; i++)
-                    {
-                        for (int j = 1; j < data.GetLength(2)-1; j++)
-                        {
-                            if (G[ch, i - 1, j - 1] >= door)
-                                result[ch, i, j] = 255;
-                        }
-                    }
-                }
-
-                return result;
-            }
-
-            /// <summary>
-            /// Combine GX和GY
-            /// </summary>
-            /// <returns>The sobel.</returns>
-            /// <param name="data">Data.</param>
-            /// <param name="door">Door.</param>
-            /// <param name="GX">Gx.</param>
-            /// <param name="GY">Gy.</param>
-            public int[,,] Sobel(int[,,] data, int door, int[,,] GX, int[,,] GY)
+            //重置為0
+            for (int i = 0; i < tmpArr.Length; i++)
             {
-                int[,,] result = (int[,,])data.Clone();
+                tmpArr[i] = 0;
+            }
 
-                for (int ch = 0; ch < data.GetLength(0); ch++)
+            //計算每個色階出現的次數
+            for (int i = 0; i < data.GetLength(1); i++)
+            {
+                for (int j = 0; j < data.GetLength(2); j++)
                 {
-                    for (int i = 1; i < data.GetLength(1) - 1; i++)
+                    tmpArr[data[0, i, j]] += 1;
+                }
+            }
+
+            return tmpArr;
+        }
+
+        private int[] staticCrf(int[,,] data)
+        {
+
+            int[] tmpArr = new int[256];
+
+            tmpArr = CalPixelNum(data);
+            int min = int.MaxValue;
+            //找最大最小
+            for (int i = 0; i < tmpArr.Length; i++)
+            {
+                if (tmpArr[i] < min & tmpArr[i] != 0)
+                    min = tmpArr[i];
+            }
+
+            //計算累積分佈函數
+            int total = 0;
+            for (int i = 0; i < tmpArr.Length; i++)
+            {
+                total += tmpArr[i];
+                tmpArr[i] = total;
+            }
+
+            for (int i = 0; i < tmpArr.Length; i++)
+            {
+                if (tmpArr[i] == 0)
+                    continue;
+                float tmp = (tmpArr[i] - min) / (float)(tmpArr[255] - min);
+                tmpArr[i] = (int)(tmp * 255);
+            }
+
+            return tmpArr;
+        }
+
+        public void PrintGraph(int[,,] data, PictureBox picturebox, String text)
+        {
+            int[] graph1 = CalPixelNum(data);
+            ZedGraphControl zedGraphControl = new ZedGraphControl();
+            zedGraphControl.Dock = DockStyle.Fill;
+            zedGraphControl.IsSynchronizeXAxes = true;
+            zedGraphControl.GraphPane.Title.IsVisible = false;
+            zedGraphControl.GraphPane.XAxis.Title.IsVisible = false;
+            zedGraphControl.GraphPane.YAxis.Title.IsVisible = false;
+            zedGraphControl.GraphPane.XAxis.Scale.FontSpec.Size = 10;
+            zedGraphControl.GraphPane.YAxis.Scale.FontSpec.Size = 10;
+            zedGraphControl.GraphPane.XAxis.MajorGrid.IsVisible = true;
+            zedGraphControl.GraphPane.YAxis.MajorGrid.IsVisible = true;
+
+            PointPairList pointPairList = new PointPairList();
+
+            for (int i = 0; i < graph1.Length; i++)
+            {
+                pointPairList.Add(i, graph1[i]);
+            }
+
+            GraphPane graphPane = zedGraphControl.GraphPane;
+            BarItem barItem = graphPane.AddBar(text, pointPairList, Color.Blue);
+
+            zedGraphControl.RestoreScale(graphPane);
+            picturebox.Controls.Add(zedGraphControl);
+        }
+    }
+
+    class Thresholding : Form
+    {
+        public Thresholding()
+        {
+        }
+
+        public int[,,] OutputThresholding(int[,,] data, int door)
+        {
+
+            int[,,] result = new int[data.GetLength(0), data.GetLength(1), data.GetLength(2)];
+
+            for (int i = 0; i < data.GetLength(1); i++)
+            {
+                for (int j = 0; j < data.GetLength(2); j++)
+                {
+                    for (int ch = 0; ch < data.GetLength(0); ch++)
                     {
-                        for (int j = 1; j < data.GetLength(2) - 1; j++)
-                        {
-                            double G = Math.Pow(Math.Pow(GX[ch, i - 1, j - 1], 2) + Math.Pow(GY[ch, i - 1, j - 1], 2), 0.5);
-
-                            if (G >= door)
-                                result[ch, i, j] = 255;
-                        }
+                        if (data[ch, i, j] >= door)
+                            result[ch, i, j] = 255;
+                        else
+                            result[ch, i, j] = 0;
                     }
                 }
-
-                return result;
             }
 
-            /// <summary>
-            /// 計算GX矩陣
-            /// </summary>
-            /// <returns>The gx.</returns>
-            /// <param name="data">Data.</param>
-            public int[,,] CalGX(int[,,] data){
+            return result;
+        }
+    }
 
-                int[,,] result = new int[data.GetLength(0), data.GetLength(1)-2, data.GetLength(2)-2];
+    class SobelEdgeDetection
+    {
+        public SobelEdgeDetection() { }
 
-                for (int i = 1; i < data.GetLength(1)-1;i++){
-                    for (int j = 1; j < data.GetLength(2)-1;j++){
-                        for (int ch = 0; ch < data.GetLength(0);ch++){
+        /// <summary>
+        /// 最終決定要保留原色還是變成白色
+        /// </summary>
+        /// <returns>The sobel.</returns>
+        /// <param name="data">Data.</param>
+        /// <param name="door">Door.</param>
+        /// <param name="G">G.</param>
+        public int[,,] Sobel(int[,,] data, int door, int[,,] G)
+        {
+            int[,,] result = (int[,,])data.Clone();
 
-                            result[ch, i - 1, j - 1] = data[ch, i - 1, j - 1] - data[ch, i - 1, j + 1] + 2 * data[ch, i, j - 1] - 2 * data[ch, i, j + 1] + data[ch, i + 1, j - 1] - data[ch, i + 1, j + 1];
-                        }
-                    }
-                }
-
-                return result;
-            }
-
-            /// <summary>
-            /// 計算GY的矩陣
-            /// </summary>
-            /// <returns>The gy.</returns>
-            /// <param name="data">Data.</param>
-            public int[,,] CalGY(int[,,] data){
-                int[,,] result = new int[data.GetLength(0), data.GetLength(1) - 2, data.GetLength(2) - 2];
-
+            for (int ch = 0; ch < data.GetLength(0); ch++)
+            {
                 for (int i = 1; i < data.GetLength(1) - 1; i++)
                 {
                     for (int j = 1; j < data.GetLength(2) - 1; j++)
                     {
-                        for (int ch = 0; ch < data.GetLength(0); ch++)
-                        {
-
-                            result[ch, i - 1, j - 1] = data[ch, i - 1, j - 1] + 2 * data[ch, i - 1, j] + data[ch, i - 1, j + 1] - data[ch, i + 1, j - 1] - 2 * data[ch, i + 1, j] - data[ch, i + 1, j + 1];
-                        }
+                        if (G[ch, i - 1, j - 1] >= door)
+                            result[ch, i, j] = 255;
                     }
                 }
-
-                return result;
             }
-        } 
 
-        class BinaryImageOverlap{
-            public BinaryImageOverlap(){}
-
-            public int[,,] CalOverlap(int[,,] data, int door){
-                
-                SobelEdgeDetection SobelEdgeDetection = new SobelEdgeDetection();
-
-                int[,,] GX = SobelEdgeDetection.CalGX(data);
-                int[,,] GY = SobelEdgeDetection.CalGY(data);
-                int[,,] result = SobelEdgeDetection.Sobel(data, door, GX, GY);
-
-                for (int i = 0;i < result.GetLength(1);i++){
-                    for (int j = 0; j < result.GetLength(2);j++){
-                        //是白色
-                        if(result[0,i,j] == 255){
-                            result[0, i, j] = 0;
-                            result[1, i, j] = 255;
-                            result[2, i, j] = 0;
-                        }
-                    }
-                }
-
-                return result;
-            }
+            return result;
         }
-        
-        class ConnectedComponent:Form{
-            public ConnectedComponent(){}
 
-            //計算物件並計算數量
-            public int CountObject(int[,,] data){
+        /// <summary>
+        /// Combine GX和GY
+        /// </summary>
+        /// <returns>The sobel.</returns>
+        /// <param name="data">Data.</param>
+        /// <param name="door">Door.</param>
+        /// <param name="GX">Gx.</param>
+        /// <param name="GY">Gy.</param>
+        public int[,,] Sobel(int[,,] data, int door, int[,,] GX, int[,,] GY)
+        {
+            int[,,] result = (int[,,])data.Clone();
 
-                ParseToZero(data);
-                int count = 0;
-                List<int> tmpLi = new List<int>();
-                for (int i = 0; i < data.GetLength(1); i++)
+            for (int ch = 0; ch < data.GetLength(0); ch++)
+            {
+                for (int i = 1; i < data.GetLength(1) - 1; i++)
                 {
-                    for (int j = 0; j < data.GetLength(2); j++)
+                    for (int j = 1; j < data.GetLength(2) - 1; j++)
                     {
-                        //是白色的在判斷
-                        if (data[0, i, j] == 255)
-                            continue;
-                        else
+                        double G = Math.Pow(Math.Pow(GX[ch, i - 1, j - 1], 2) + Math.Pow(GY[ch, i - 1, j - 1], 2), 0.5);
+
+                        if (G >= door)
+                            result[ch, i, j] = 255;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 計算GX矩陣
+        /// </summary>
+        /// <returns>The gx.</returns>
+        /// <param name="data">Data.</param>
+        public int[,,] CalGX(int[,,] data)
+        {
+
+            int[,,] result = new int[data.GetLength(0), data.GetLength(1) - 2, data.GetLength(2) - 2];
+
+            for (int i = 1; i < data.GetLength(1) - 1; i++)
+            {
+                for (int j = 1; j < data.GetLength(2) - 1; j++)
+                {
+                    for (int ch = 0; ch < data.GetLength(0); ch++)
+                    {
+
+                        result[ch, i - 1, j - 1] = data[ch, i - 1, j - 1] - data[ch, i - 1, j + 1] + 2 * data[ch, i, j - 1] - 2 * data[ch, i, j + 1] + data[ch, i + 1, j - 1] - data[ch, i + 1, j + 1];
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 計算GY的矩陣
+        /// </summary>
+        /// <returns>The gy.</returns>
+        /// <param name="data">Data.</param>
+        public int[,,] CalGY(int[,,] data)
+        {
+            int[,,] result = new int[data.GetLength(0), data.GetLength(1) - 2, data.GetLength(2) - 2];
+
+            for (int i = 1; i < data.GetLength(1) - 1; i++)
+            {
+                for (int j = 1; j < data.GetLength(2) - 1; j++)
+                {
+                    for (int ch = 0; ch < data.GetLength(0); ch++)
+                    {
+
+                        result[ch, i - 1, j - 1] = data[ch, i - 1, j - 1] + 2 * data[ch, i - 1, j] + data[ch, i - 1, j + 1] - data[ch, i + 1, j - 1] - 2 * data[ch, i + 1, j] - data[ch, i + 1, j + 1];
+                    }
+                }
+            }
+
+            return result;
+        }
+    }
+
+    class BinaryImageOverlap
+    {
+        public BinaryImageOverlap() { }
+
+        public int[,,] CalOverlap(int[,,] data, int door)
+        {
+
+            SobelEdgeDetection SobelEdgeDetection = new SobelEdgeDetection();
+
+            int[,,] GX = SobelEdgeDetection.CalGX(data);
+            int[,,] GY = SobelEdgeDetection.CalGY(data);
+            int[,,] result = SobelEdgeDetection.Sobel(data, door, GX, GY);
+
+            for (int i = 0; i < result.GetLength(1); i++)
+            {
+                for (int j = 0; j < result.GetLength(2); j++)
+                {
+                    //是白色
+                    if (result[0, i, j] == 255)
+                    {
+                        result[0, i, j] = 0;
+                        result[1, i, j] = 255;
+                        result[2, i, j] = 0;
+                    }
+                }
+            }
+
+            return result;
+        }
+    }
+
+    class ConnectedComponent : Form
+    {
+        public ConnectedComponent() { }
+
+        //計算物件並計算數量
+        public int CountObject(int[,,] data)
+        {
+
+            ParseToZero(data);
+            int count = 0;
+            List<int> tmpLi = new List<int>();//亂數過的數字
+            tmpLi.Add(255);
+            tmpLi.Add(0);
+            Dictionary<string, List<int>> MyDic = new Dictionary<string, List<int>>();
+            for (int i = 0; i < data.GetLength(1); i++)
+            {
+                for (int j = 0; j < data.GetLength(2); j++)
+                {
+                    //是白色的在判斷
+                    if (data[0, i, j] != 255)
+                    {
+                        bool mark = false;
+                        int[] color = { 0, 0, 0 };
+                        //掃描左上 上 左 左下是不是被另外標記了
+                        for (int si = -1; si < 2; si++)
                         {
-                            bool mark = false;
-                            int[] color = { 0, 0, 0 };
-                            //List<int> tmpLi = new List<int>();
-                            //掃描左上 上 左 左下是不是被另外標記了
+                            if ((si + i) < 0 || (si + i) >= data.GetLength(1))
+                                continue;
+                            for (int sj = -1; sj < 2; sj++)
+                            {
+                                if ((sj + j) < 0 || (sj + j) >= data.GetLength(2))
+                                    continue;
+                                if (data[0, i + si, j + sj] != 255 & data[0, i + si, j + sj] != 0)
+                                {
+                                    mark = true;
+                                    color[0] = data[0, i + si, j + sj];
+                                    color[1] = data[1, i + si, j + sj];
+                                    color[2] = data[2, i + si, j + sj];
+                                }
+                            }
+                        }
+
+                        if (mark)
+                        {
+                            //他的九宮格也要一起上色
                             for (int si = -1; si < 2; si++)
                             {
-                                if ((si + i) < 0 || (si+i) >= data.GetLength(1))
+                                if ((si + i) < 0 || (si + i) >= data.GetLength(1))
                                     continue;
                                 for (int sj = -1; sj < 2; sj++)
                                 {
                                     if ((sj + j) < 0 || (sj + j) >= data.GetLength(2))
                                         continue;
-                                    if (data[0, i + si, j + sj] != 255 & data[0, i + si, j + sj] != 0)
+                                    if (data[0, i + si, j + sj] == 0)
                                     {
-                                        mark = true;
-                                        color[0] = data[0, i + si, j + sj];
-                                        color[1] = data[1, i + si, j + sj];
-                                        color[2] = data[2, i +  si, j + sj];
+                                        data[0, i + si, j + sj] = color[0];
+                                        data[1, i + si, j + sj] = color[1];
+                                        data[2, i + si, j + sj] = color[2];
                                     }
-                                }
-                            }
-
-                            if (mark)
-                            {
-                                for (int si = -1; si < 2; si++)
-                                {
-                                    if ((si + i) < 0 || (si + i) >= data.GetLength(1))
+                                    else if (data[0, i + si, j + sj] == 255)
+                                    {
                                         continue;
-                                    for (int sj = -1; sj < 2; sj++)
+                                    }
+                                    //是其他顏色的
+                                    else if (data[0, i + si, j + sj] != color[0] ||
+                                             data[1, i + si, j + sj] != color[1] ||
+                                             data[2, i + si, j + sj] != color[2])
                                     {
-                                        if ((sj + j) < 0 || (sj + j) >= data.GetLength(2))
+                                        String Key = data[0, i + si, j + sj] + "_" + data[1, i + si, j + sj] + "_" + data[2, i + si, j + sj];
+
+                                        if (MyDic.ContainsKey(Key))
                                             continue;
-                                        if (data[0, i + si, j + sj] != 255)
-                                        {
-                                            data[0, i + si, j + sj] = color[0];
-                                            data[1, i + si, j + sj] = color[1];
-                                            data[2, i + si, j + sj] = color[2];
-                                        }
+                                        List<int> value = new List<int>();
+                                        value.Add(color[0]);
+                                        value.Add(color[1]);
+                                        value.Add(color[2]);
+                                        MyDic.Add(Key, value);
                                     }
                                 }
                             }
-                            else
-                            {
-                                Random ran = new Random();//亂數種子
-
-                                for (int k = 0; k < 3; k++)
-                                {
-                                    int ranNum = ran.Next(0, 255);
-                                    while (tmpLi.Contains(ranNum))
-                                    {
-                                        ranNum = ran.Next(0, 255);
-                                    }
-                                    tmpLi.Add(ranNum);
-
-                                    data[k, i, j] = ran.Next(0, 255);
-                                }
-
-                                count += 1;
-                            }
-                        }
-                    }
-                }
-                return count;
-            }
-
-            //parse to 255 & 0
-            private void ParseToZero(int[,,] data)
-            {
-                
-                for(int j = 0; j < data.GetLength(1); j++)
-                {
-                    for(int k = 0; k < data.GetLength(2); k++)
-                    {
-                        if (data[0, j, k] < 128)
-                        {
-                            data[0, j, k] = 0;
-                            data[1, j, k] = 0;
-                            data[2, j, k] = 0;
                         }
                         else
                         {
-                            data[0, j, k] = 255;
-                            data[1, j, k] = 255;
-                            data[2, j, k] = 255;
+                            Random ran = new Random();//亂數種子
+
+                            for (int k = 0; k < 3; k++)
+                            {
+                                int ranNum = ran.Next(0, 255);
+                                while (tmpLi.Contains(ranNum))
+                                {
+                                    ranNum = ran.Next(0, 255);
+                                }
+                                tmpLi.Add(ranNum);
+
+                                data[k, i, j] = ran.Next(0, 255);
+                            }
+
+                            count += 1;
                         }
                     }
-                 }
-                
-
+                }
             }
+            //重新改顏色
+            for (int i = 0; i < data.GetLength(1); i++)
+            {
+                for (int j = 0; j < data.GetLength(2); j++)
+                {
+                    String Key = data[0, i, j] + "_" + data[1, i, j] + "_" + data[2, i, j];
+
+                    if (MyDic.ContainsKey(Key))
+                    {
+                        for (int k = 0; k < 3; k++)
+                        {
+                            data[k, i, j] = MyDic[Key][k];
+                        }
+
+                    }
+                }
+            }
+            return count - MyDic.Keys.Count;
         }
 
+        //parse to 255 & 0
+        private void ParseToZero(int[,,] data)
+        {
+
+            for (int j = 0; j < data.GetLength(1); j++)
+            {
+                for (int k = 0; k < data.GetLength(2); k++)
+                {
+                    if (data[0, j, k] < 128)
+                    {
+                        data[0, j, k] = 0;
+                        data[1, j, k] = 0;
+                        data[2, j, k] = 0;
+                    }
+                    else
+                    {
+                        data[0, j, k] = 255;
+                        data[1, j, k] = 255;
+                        data[2, j, k] = 255;
+                    }
+                }
+            }
+
+
+        }
     }
 }
